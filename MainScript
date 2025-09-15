@@ -463,7 +463,7 @@ Tab:CreateToggle({
             for _, chain in ipairs(AIFolder:GetChildren()) do
                 local chokeObj = getAttr(chain, "ChokeMeter")
                 if chokeObj and chokeObj:IsA("NumberValue") then
-                    Сonnections[chokeObj] = chokeObj:GetPropertyChangedSignal("Value"):Connect(function()
+                    Connections[chokeObj] = chokeObj:GetPropertyChangedSignal("Value"):Connect(function()
                         local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
                         local chainHRP = chain:FindFirstChild("HumanoidRootPart") or chain
                         if not hrp or not chainHRP then return end
@@ -479,7 +479,7 @@ Tab:CreateToggle({
             local soundFolder = game.ReplicatedStorage.GameStuff.Sounds.AISounds.CHAIN.Choke
             for _, sound in ipairs(soundFolder:GetChildren()) do
                 if sound:IsA("Sound") and sound.Name ~= "ChokeLose" and sound.Name ~= "ChokeWin" then
-                    Сonnections[sound] = sound:GetPropertyChangedSignal("Playing"):Connect(function()
+                    Connections[sound] = sound:GetPropertyChangedSignal("Playing"):Connect(function()
                         if sound.Playing then
                             for _, chain in ipairs(AIFolder:GetChildren()) do
                                 local id = chain:GetDebugId()
@@ -553,8 +553,8 @@ Tab:CreateToggle({
                     setreadonly(mt, true)
                     _G.parryDisabled = false
                     local antibloxk = player.PlayerGui.Ingame.MechanicsFrame.Cooldowns:FindFirstChild("ClashUnavailable")
-                    if antibloxk and Visible == true
-                        antibloxk.Text = Not Working [NO BLOCK]
+                    if antibloxk and antibloxk.Visible == true then
+                         antibloxk.Text = "Not Working [NO BLOCK]"
                     end
                 end
             end)

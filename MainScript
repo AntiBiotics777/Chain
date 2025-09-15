@@ -1,0 +1,937 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Players = game:GetService("Players")
+local RepStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local UIS = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local PlayerStats = player:WaitForChild("PlayerStats")
+local bp = PlayerStats:WaitForChild("Blueprints")
+local Stats = char:FindFirstChild("Stats")
+local Stamina = Stats and Stats:FindFirstChild("Stamina")
+local CombatStamina = Stats and Stats:FindFirstChild("CombatStamina")
+local ClashStrength = Stats and Stats:FindFirstChild("ClashStrength")
+local Remotes = RepStorage:WaitForChild("GameStuff"):WaitForChild("Remotes")
+local Cam = Workspace.CurrentCamera
+local AIFolder = Workspace:WaitForChild("Misc"):WaitForChild("AI")
+
+local StaminaConn, CombatConn, ClashConn = nil, nil, nil
+local CharAddedConn = nil
+local VirtualInputManager = nil
+local Connections = {}
+local lastTriggered = {}
+
+local AdonisPressed = false
+local InfStaminaEnabled = false
+local InfCombatEnabled = false
+local ClashWinEnabled = false
+local pressed = false
+local triggered = false
+
+--Helpers
+local function Clear(name)
+    if Connections[name] then
+        Connections[name]:Disconnect()
+        Connections[name] = nil
+    end
+end
+
+local function getAttr(model, attr)
+    local ok, val = pcall(model.GetAttribute, model, attr)
+    return ok and val or nil
+end
+
+local function triggerQ(id)
+    if not lastTriggered[id] then
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+        lastTriggered[id] = true
+    end
+end
+
+local function NotifyAboutVirtual()
+    if not VirtualInputManager then
+        Rayfield:Notify({
+            Title = "VirtualInputManager not loaded",
+            Content = "Make sure you pressed Adonis AntiCheat Bypass button",
+            Duration = 15,
+            Image = "keyboard"
+        })
+    end
+end
+-- I honestly don’t care if someone steals or uses this script. Use it however you want.
+
+--Unitilize
+task.spawn(function()
+    while not AdonisPressed do
+        task.wait(0.1)
+    end
+    task.wait(0.2)
+    VirtualInputManager = game:GetService("VirtualInputManager")
+    print("VirtualInputManager loaded!")
+end)
+
+local Window = Rayfield:CreateWindow({
+   Name = "Chain 1.2.5 alpha ver",
+   Icon = 0,
+   LoadingTitle = "Injecting...",
+   LoadingSubtitle = "by unknown?",
+   ShowText = "Rayfield",
+   Theme = "Default",
+   ToggleUIKeybind = "K",
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false,
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = Chain,
+      FileName = "Anti"
+   },
+   Discord = {
+      Enabled = true,
+      Invite = "ZHT96ECWQs",
+      RememberJoins = true
+   },
+   KeySystem = false,
+   KeySettings = {
+      Title = "Untitled",
+      Subtitle = "Key System",
+      Note = "No method of obtaining the key is provided",
+      FileName = "Key",
+      SaveKey = true,
+      GrabKeyFromSite = false,
+      Key = {"Hello"}
+   }
+})
+
+local Tab = Window:CreateTab("Main", 4483362458)
+
+local Label = Tab:CreateLabel("So main tab has like nothing but FullBright,", "clipboard-pen-line")
+
+local Button = Tab:CreateButton({
+   Name = "Adonis AntiCheat Bypass",
+   Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua"))()
+        AdonisPressed = true
+   end,
+})
+
+Rayfield:Notify({
+   Title = "Faq",
+   Content = "Actually made by Anti on dc server not unknown",
+   Duration = 15,
+   Image = 7488932274
+})
+
+local Button = Tab:CreateButton({
+    Name = "Copy Discord Invite Link",
+    Callback = function()
+        setclipboard("discord.gg/ZHT96ECWQs")
+        Rayfield:Notify({
+            Title = "Invite Link Copied",
+            Content = "The Discord invitation has been copied to your clipboard. Share it wisely.",
+            Duration = 7,
+            Image = 9058466125,
+        })
+    end,
+})
+
+local Toggle = Tab:CreateToggle({
+    Name = "Detect All Special Players",
+    CurrentValue = false,
+    Flag = "DetectAllToggle",
+    Callback = function(Value)
+        local Players = game:GetService("Players")
+        
+        local categories = {
+            ["Special Thanks"] = {"Mylezeezz", "Sir_Mason13", "jasper_creations", "ItzRoboMaggot", "CyroTr00per"},
+            ["Contributer"] = {"JankCorp", "JakeDravioli", "1Boomah"},
+            ["Tester"] = {"MikoSfx", "Lgl_frijol", "xF_alse", "FluxedThoughts", "Blackcoolia", "Crinsikle", "HolyBlanks", "mightyasher", "ROV3RRO", "Oce1rosTheConsum3d", "Tsunantt", "Shark_bossx007", "AgentCatto", "ashinvy", "roblox_user_841257226"},
+            ["Mod/Admin"] = {"As3tra1", "GetRightDawg", "N0XMANIAC", "Benthesoccerone", "Megamind184", "OrekLus1", "maravilye2312", "euphoria4830", "XHttpkeVin", "ddelus1", "Chromixx_WasTaken"},
+            ["Manager"] = {"fraudTheSecond", "IAmUnderAMask"},
+            ["Dev"] = {"Yurixzaaa", "SSpreezzy"}
+        }
+
+        local targetSet = {}
+        for category, users in pairs(categories) do
+            for _, userName in ipairs(users) do
+                targetSet[userName] = category
+            end
+        end
+
+        local function notify(playerName, joined)
+            local category = targetSet[playerName]
+            if category then
+                Rayfield:Notify({
+                    Title = category .. " Detected",
+                    Content = "Detected " .. playerName .. (joined and "has joined" or " in the game."),
+                    Duration = 15,
+                    Image = 4815660197
+                })
+            end
+        end
+
+        Players.PlayerAdded:Connect(function(player)
+            if targetSet[player.Name] then
+                notify(player.Name, true)
+            end
+        end)
+
+        for _, player in Players:GetPlayers() do
+            if targetSet[player.Name] then
+                notify(player.Name, false)
+            end
+        end
+    end,
+})
+
+Tab:CreateButton({
+    Name = "No Fog",
+    Callback = function()
+        Lighting.FogEnd = 1e6
+        Lighting:GetPropertyChangedSignal("FogEnd"):Connect(function() Lighting.FogEnd = 1e6 end)
+        for _, v in ipairs(Lighting:GetDescendants()) do
+            if v:IsA("Atmosphere") then
+                v.Density = 0
+                v:GetPropertyChangedSignal("Density"):Connect(function() v.Density = 0 end)
+            end
+        end
+        Lighting.DescendantAdded:Connect(function(v)
+            if v:IsA("Atmosphere") then
+                v.Density = 0
+                v:GetPropertyChangedSignal("Density"):Connect(function() v.Density = 0 end)
+            end
+        end)
+    end
+})
+
+Tab:CreateButton({
+    Name = "Full Bright",
+    Callback = function()
+        local function apply()
+            Lighting.Brightness = 1
+            Lighting.ClockTime = 12
+            Lighting.FogEnd = 1e6
+            Lighting.GlobalShadows = false
+            Lighting.Ambient = Color3.fromRGB(178, 178, 178)
+        end
+        apply()
+        Lighting:GetPropertyChangedSignal("Brightness"):Connect(apply)
+        Lighting:GetPropertyChangedSignal("ClockTime"):Connect(apply)
+        Lighting:GetPropertyChangedSignal("FogEnd"):Connect(apply)
+        Lighting:GetPropertyChangedSignal("GlobalShadows"):Connect(apply)
+        Lighting:GetPropertyChangedSignal("Ambient"):Connect(apply)
+    end
+})
+
+local Tab = Window:CreateTab("Gui", "terminal")
+
+Tab:CreateToggle({
+    Name = "Deconstructor Gui",
+    CurrentValue = false,
+    Flag = "DeconstructorToggle",
+    Callback = function()
+        local gui = player:WaitForChild("PlayerGui"):WaitForChild("Ingame"):WaitForChild("Deconstructor")
+        gui.Visible = not gui.Visible
+    end
+})
+
+Tab:CreateToggle({
+    Name = "Workbench Gui",
+    CurrentValue = false,
+    Flag = "WorkbenchToggle",
+    Callback = function()
+        local gui = player:WaitForChild("PlayerGui"):WaitForChild("Ingame"):WaitForChild("Workbench")
+        gui.Visible = not gui.Visible
+    end
+})
+
+Tab:CreateToggle({
+    Name = "Shop Gui",
+    CurrentValue = false,
+    Flag = "ShopToggle",
+    Callback = function(active)
+        local shopGui = player:WaitForChild("PlayerGui"):WaitForChild("Ingame"):WaitForChild("Shop")
+        shopGui.Visible = not shopGui.Visible
+    end,
+})
+
+local Tab = Window:CreateTab("experimental", "flask-conical")
+
+local Label = Tab:CreateLabel("Use it at your own risk it may get detected by server script, Make sure that u removed adonis anticheat, half of these is not working lol", "circle-alert")
+
+Rayfield:Notify({
+   Title = "Warning",
+   Content = "Please use these only with a small number of players, as anyone could report you for using them.",
+   Duration = 15,
+   Image = 7488932274
+})
+
+local Toggle = Tab:CreateToggle({
+    Name = "Godmode - use tomahawk heavy attack - not mine",
+    CurrentValue = false,
+    Flag = "GodmodeToggle",
+    Callback = function()
+        loadstring(game:HttpGet("https://pastebin.com/3yyB4RmC"))()
+    end,
+})
+
+Tab:CreateToggle({
+    Name = "Anti Longer Dodge CoolDown",
+    CurrentValue = false,
+    Flag = "AntiLongDodge",
+    Callback = function(on)
+        Clear("AntiDodge")
+
+        local hiddenNames = {
+            ["LongDodgeCD"] = true,
+            ["LongerDodgeCD"] = true
+        }
+
+        local mt = getrawmetatable(game)
+        local oldIndex = mt.__index
+        local oldNamecall = mt.__namecall
+        local connections = {}
+        local hooksEnabled = false
+
+        if on then
+            hooksEnabled = true
+
+            setreadonly(mt, false)
+
+            mt.__index = newcclosure(function(self, key)
+                if hiddenNames[key] then
+                    return nil
+                end
+                return oldIndex(self, key)
+            end)
+
+            mt.__namecall = newcclosure(function(self, ...)
+                local method = getnamecallmethod()
+                local args = {...}
+
+                if (method == "FindFirstChild" or method == "WaitForChild") and hiddenNames[args[1]] then
+                    return nil
+                end
+
+                if method == "GetChildren" or method == "GetDescendants" then
+                    local result = oldNamecall(self, ...)
+                    local filtered = {}
+                    for _, obj in ipairs(result) do
+                        if not hiddenNames[obj.Name] then
+                            table.insert(filtered, obj)
+                        end
+                    end
+                    return filtered
+                end
+
+                return oldNamecall(self, ...)
+            end)
+
+            setreadonly(mt, true)
+
+            table.insert(connections, game.DescendantAdded:Connect(function(obj)
+                if hiddenNames[obj.Name] then
+                    task.defer(function()
+                        pcall(function() obj:Destroy() end)
+                    end)
+                end
+            end))
+
+            local function attach(char)
+                local humanoid = char:WaitForChild("Humanoid")
+                Clear("AntiDodge")
+
+                Connections["AntiDodge"] = RunService.RenderStepped:Connect(function()
+                    for _, child in ipairs(humanoid:GetChildren()) do
+                        if hiddenNames[child.Name] then
+                            pcall(function() child:Destroy() end)
+                            local cdGui = player.PlayerGui.Ingame.MechanicsFrame.Cooldowns:FindFirstChild(child.Name)
+                            if cdGui then
+                                cdGui.Visible = false
+                            end
+                        end
+                    end
+                end)
+            end
+
+            attach(player.Character or player.CharacterAdded:Wait())
+            player.CharacterAdded:Connect(attach)
+
+            Connections["AntiDodgeHooks"] = {
+                mt = mt,
+                oldIndex = oldIndex,
+                oldNamecall = oldNamecall,
+                conns = connections
+            }
+
+        else
+            local data = Connections["AntiDodgeHooks"]
+            if data then
+                setreadonly(data.mt, false)
+                data.mt.__index = data.oldIndex
+                data.mt.__namecall = data.oldNamecall
+                setreadonly(data.mt, true)
+
+                for _, c in ipairs(data.conns) do
+                    c:Disconnect()
+                end
+                Connections["AntiDodgeHooks"] = nil
+            end
+        end
+    end
+})
+
+Tab:CreateToggle({
+    Name = "Auto Tomahawk QTE & Machete Parry",
+    CurrentValue = false,
+    Flag = "AutoQTE",
+    Callback = function(on)
+        if not VirtualInputManager then NotifyAboutVirtual() end
+        Clear("AutoQTE")
+        if on then
+            local function attach()
+                local gui = player:WaitForChild("PlayerGui")
+                                :WaitForChild("Ingame")
+                                :WaitForChild("MechanicsFrame")
+                                :WaitForChild("QTEToma")
+                local button = gui:WaitForChild("ImageButton")
+
+                Clear("AutoQTE")
+                Connections["AutoQTE"] = RunService.RenderStepped:Connect(function()
+                    if gui.Visible then
+                        local key = button:WaitForChild("PC").Text
+                        local enumKey = Enum.KeyCode[key:upper()]
+                        if enumKey and VirtualInputManager then
+                            task.wait(0.05 + math.random() * 0.02)
+                            VirtualInputManager:SendKeyEvent(true, enumKey, false, game)
+                            task.wait(0.05)
+                            VirtualInputManager:SendKeyEvent(false, enumKey, false, game)
+                        end
+                    end
+                end)
+            end
+            attach(player.Character or player.CharacterAdded:Wait())
+            player.CharacterAdded:Connect(attach)
+        end
+    end
+})
+
+Tab:CreateToggle({
+    Name = "Clash CoolDown Bypass",
+    CurrentValue = false,
+    Flag = "ClashCD",
+    Callback = function(on)
+        Clear("ClashBypass")
+        if on then
+            local function attach(char)
+                local humanoid = char:WaitForChild("Humanoid")
+                Clear("ClashBypass")
+                Connections["ClashBypass"] = RunService.RenderStepped:Connect(function()
+                    local clash = humanoid:FindFirstChild("ClashCD")
+                    if clash then
+                        _G.ClashCD = false
+                        if player.PlayerGui:FindFirstChild("Ingame") and player.PlayerGui.Ingame:FindFirstChild("MechanicsFrame") then
+                            local cd = player.PlayerGui.Ingame.MechanicsFrame.Cooldowns:FindFirstChild("NoClash")
+                            if cd and cd.Visible == true then
+                                cd.Text = "Not working [NO CLASH]"
+                            end
+                        end
+                        clash:Destroy()
+                    end
+                end)
+            end
+            attach(player.Character or player.CharacterAdded:Wait())
+            player.CharacterAdded:Connect(attach)
+        end
+    end
+})
+
+Tab:CreateToggle({
+    Name = "Auto Choke Dodge",
+    CurrentValue = false,
+    Flag = "AutoChokeQ",
+    Callback = function(on)
+        if not VirtualInputManager then NotifyAboutVirtual() end
+        Clear("ChokeQ")
+        if not on then return end
+        local function attach()
+            Clear("ChokeQ")
+            for _, chain in ipairs(AIFolder:GetChildren()) do
+                local chokeObj = getAttr(chain, "ChokeMeter")
+                if chokeObj and chokeObj:IsA("NumberValue") then
+                    Сonnections[chokeObj] = chokeObj:GetPropertyChangedSignal("Value"):Connect(function()
+                        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                        local chainHRP = chain:FindFirstChild("HumanoidRootPart") or chain
+                        if not hrp or not chainHRP then return end
+                        local id = chain:GetDebugId()
+                        if chokeObj.Value >= 97 and (hrp.Position - chainHRP.Position).Magnitude < 25 then
+                            triggerQ(id)
+                        else
+                            lastTriggered[id] = false
+                        end
+                    end)
+                end
+            end
+            local soundFolder = game.ReplicatedStorage.GameStuff.Sounds.AISounds.CHAIN.Choke
+            for _, sound in ipairs(soundFolder:GetChildren()) do
+                if sound:IsA("Sound") and sound.Name ~= "ChokeLose" and sound.Name ~= "ChokeWin" then
+                    Сonnections[sound] = sound:GetPropertyChangedSignal("Playing"):Connect(function()
+                        if sound.Playing then
+                            for _, chain in ipairs(AIFolder:GetChildren()) do
+                                local id = chain:GetDebugId()
+                                triggerQ(id)
+                            end
+                        end
+                    end)
+                end
+            end
+        end
+        attach()
+        player.CharacterAdded:Connect(attach)
+    end
+})
+
+Tab:CreateToggle({
+    Name = "Auto Avoid Chain GroundSlam",
+    CurrentValue = false,
+    Flag = "AutoSlam",
+    Callback = function(on)
+        Clear("SlamEvade")
+        if on then
+            local function attach()
+                Clear("SlamEvade")
+                Connections["SlamEvade"] = RunService.Heartbeat:Connect(function()
+                    local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                    if not myRoot then return end
+                    for _, chain in ipairs(AIFolder:GetChildren()) do
+                        local burst = getAttr(chain, "Burst")
+                        local root = chain:FindFirstChild("HumanoidRootPart")
+                        if burst and type(burst) == "number" and burst >= 100 and root then
+                            local distance = (myRoot.Position - root.Position).Magnitude
+                            if distance < 40 then
+                                local offset = (myRoot.Position - root.Position).Unit
+                                local angle = math.rad(math.random(-120, 120))
+                                local rx = offset.X * math.cos(angle) - offset.Z * math.sin(angle)
+                                local rz = offset.X * math.sin(angle) + offset.Z * math.cos(angle)
+                                local dir = Vector3.new(rx, 0, rz).Unit
+                                local pos = myRoot.Position + dir * 50 + Vector3.new(0, math.random(3, 6), 0)
+                                myRoot.CFrame = CFrame.new(pos)
+                            end
+                        end
+                    end
+                end)
+            end
+            attach()
+            player.CharacterAdded:Connect(attach)
+        end
+    end
+})
+
+Tab:CreateToggle({
+    Name = "Anti No Block",
+    CurrentValue = false,
+    Flag = "AntiBlock",
+    Callback = function(on)
+        if not VirtualInputManager then NotifyAboutVirtual() end
+        if not on then return Clear("AntiBlock") end
+        local player = game.Players.LocalPlayer
+        local function attach()
+            if Connections["AntiBlock"] then Clear("AntiBlock") end
+            Connections["AntiBlock"] = RunService.Heartbeat:Connect(function()
+                if _G.parryDisabled then
+                    local mt = getrawmetatable(game)
+                    setreadonly(mt, false)
+                    local oldIndex = mt.__index
+                    mt.__index = newcclosure(function(t,k)
+                        if k == "Clash" then return true end
+                        return oldIndex(t,k)
+                    end)
+                    setreadonly(mt, true)
+                    _G.parryDisabled = false
+                    local antibloxk = player.PlayerGui.Ingame.MechanicsFrame.Cooldowns:FindFirstChild("ClashUnavailable")
+                    if antibloxk and Visible == true
+                        antibloxk.Text = Not Working [NO BLOCK]
+                    end
+                end
+            end)
+        end
+        attach()
+        player.CharacterAdded:Connect(attach)
+    end
+})
+
+local Tab = Window:CreateTab("Combat", "swords")
+
+Tab:CreateToggle({
+    Name = "Infinite Stamina",
+    CurrentValue = false,
+    Flag = "InfStam",
+    Callback = function(on)
+        Clear("Stamina")
+        if on then
+            local function attach(char)
+                local stamina = char:WaitForChild("Stats"):WaitForChild("Stamina")
+                Clear("Stamina")
+                Connections["Stamina"] = RunService.Heartbeat:Connect(function()
+                    if stamina.Value < 100 then
+                        stamina.Value = 100
+                    end
+                end)
+            end
+            attach(player.Character or player.CharacterAdded:Wait())
+            player.CharacterAdded:Connect(attach)
+        end
+    end
+})
+
+Tab:CreateToggle({
+    Name = "Inf Combat Stamina",
+    CurrentValue = false,
+    Flag = "InfCom",
+    Callback = function(on)
+        Clear("Combat")
+        if on then
+            local function attach(char)
+                local combat = char:WaitForChild("Stats"):WaitForChild("CombatStamina")
+                Clear("Combat")
+                Connections["Combat"] = RunService.Heartbeat:Connect(function()
+                    if combat.Value < 100 then
+                        combat.Value = 100
+                    end
+                end)
+            end
+            attach(player.Character or player.CharacterAdded:Wait())
+            player.CharacterAdded:Connect(attach)
+        end
+    end
+})
+
+Tab:CreateToggle({
+    Name = "ClashWin",
+    CurrentValue = false,
+    Flag = "ClashS",
+    Callback = function(on)
+        Clear("Clash")
+        if on then
+            local function attach(char)
+                local clash = char:WaitForChild("Stats"):FindFirstChild("ClashStrength")
+                if clash then
+                    Clear("Clash")
+                    Connections["Clash"] = RunService.Heartbeat:Connect(function()
+                        if clash.Value < 100 then
+                            clash.Value = 100
+                        end
+                    end)
+                end
+            end
+            attach(player.Character or player.CharacterAdded:Wait())
+            player.CharacterAdded:Connect(attach)
+        end
+    end
+})
+
+Tab:CreateToggle({
+    Name = "Aimbot rewrite",
+    CurrentValue = false,
+    Flag = "Toggle1",
+    Callback = function(state)
+        local aiming = false
+        local target = nil
+
+        UIS.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton2 then
+                aiming = true
+                target = nil
+            end
+        end)
+
+        UIS.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton2 then
+                aiming = false
+            end
+        end)
+
+        RunService.Heartbeat:Connect(function()
+            if not target or not target.Parent or math.random() < 0.01 then
+                local closestDist = math.huge
+                local closestTarget = nil
+
+                for _, npc in ipairs(AIFolder:GetChildren()) do
+                    local root = npc:FindFirstChild("HumanoidRootPart")
+                    if root then
+                        local dist = (Cam.CFrame.Position - root.Position).Magnitude
+                        if dist < closestDist then
+                            closestDist = dist
+                            closestTarget = npc
+                        end
+                    end
+                end
+
+                target = closestTarget
+            end
+
+            if state and aiming and target then
+                local offset = Vector3.new(
+                    (math.random() - 0.5) * 0.4,
+                    (math.random() - 0.5) * 0.4,
+                    (math.random() - 0.5) * 0.4
+                )
+                local desired = CFrame.new(Cam.CFrame.Position, target:GetPivot().Position + offset)
+                Cam.CFrame = Cam.CFrame:Lerp(desired, 0.1 + math.random() * 0.15)
+            end
+        end)
+    end
+})
+
+local Tab = Window:CreateTab("Miscs", "route")
+
+local Toggle = Tab:CreateToggle({
+    Name = "Artifact Espp",
+    CurrentValue = false,
+    Flag = "ArtifactToggle",
+    Callback = function(Value)
+        local localPlayer = Players.LocalPlayer
+
+        Clear("ArtifactToggle")
+        
+        if not Value then
+            return
+        end
+
+        local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+        local rootPart = character:WaitForChild("HumanoidRootPart")
+        local artifactsFolder = workspace.Misc.Zones.LootingItems.Artifacts
+
+        local guiFolder = Instance.new("Folder")
+        guiFolder.Name = "ArtifactESPFolder_" .. tostring(tick())
+        guiFolder.Parent = game.CoreGui
+
+        local artifactData = {}
+
+        local function makeDistanceGui(targetPart)
+            local billboard = Instance.new("BillboardGui")
+            billboard.Name = "ArtifactBillboard_" .. tostring(math.random(100000, 999999))
+            billboard.Adornee = targetPart
+            billboard.Size = UDim2.new(0, 120, 0, 50)
+            billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+            billboard.AlwaysOnTop = true
+
+            local label = Instance.new("TextLabel")
+            label.BackgroundTransparency = 0.5
+            label.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            label.Size = UDim2.new(1, 0, 1, 0)
+            label.TextColor3 = Color3.fromRGB(255, 100, 100)
+            label.TextStrokeTransparency = 0
+            label.TextScaled = true
+            label.Font = Enum.Font.GothamBold
+            label.Text = "0.0 studs"
+            label.Parent = billboard
+
+            billboard.Parent = guiFolder
+            return label
+        end
+
+        for _, artifact in ipairs(artifactsFolder:GetChildren()) do
+            if artifact:IsA("Model") then
+                for _, part in ipairs(artifact:GetChildren()) do
+                    if part:IsA("MeshPart") then
+                        local hl = Instance.new("Highlight")
+                        hl.Adornee = part
+                        hl.FillColor = Color3.fromRGB(255, 50, 50)
+                        hl.OutlineColor = Color3.fromRGB(255, 200, 200)
+                        hl.Parent = part
+
+                        local distanceLabel = makeDistanceGui(part)
+                        table.insert(artifactData, { Part = part, Label = distanceLabel })
+                    end
+                end
+            end
+        end
+
+        Connections["ArtifactToggle"] = RunService.Heartbeat:Connect(function()
+            if not localPlayer.Character or not localPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                guiFolder:Destroy()
+                Clear("ArtifactToggle")
+                return
+            end
+
+            local root = localPlayer.Character:WaitForChild("HumanoidRootPart")
+            for _, data in ipairs(artifactData) do
+                if data.Part and data.Part.Parent then
+                    local distance = (root.Position - data.Part.Position).Magnitude
+                    data.Label.Text = string.format("%.1f studs", distance)
+                end
+            end
+        end)
+    end
+})
+
+local Toggle = Tab:CreateToggle({
+    Name = "Scrap Collector",
+    CurrentValue = false,
+    Flag = "ScrapCollectorToggle",
+    Callback = function(Value)
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/BongCloudMaster/CHAIN/main/scrapcollector.lua"))()
+    end,
+})
+
+local Divider = Tab:CreateDivider()
+
+Tab:CreateButton({
+   Name = "Teleport to SafeHouse",
+   Callback = function()
+      game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(164.3, -93.4, 229.1)
+   end
+})
+
+Tab:CreateButton({
+   Name = "Teleport to WorkShop Outside",
+   Callback = function()
+      game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(132.5, -107.2, -3.0)
+   end
+})
+
+Tab:CreateButton({
+   Name = "Teleport to WorkShop Inside",
+   Callback = function()
+      game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(168.2, -102.8, -31.5)
+   end
+})
+
+Tab:CreateButton({
+   Name = "Teleport to Cabin inside",
+   Callback = function()
+      game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-323.2, -87.5, 292.0)
+   end
+})
+
+Tab:CreateButton({
+   Name = "Teleport to Shop",
+   Callback = function()
+      game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-112.9, -86.5, 205.0)
+   end
+})
+
+Tab:CreateButton({
+   Name = "Teleport to PowerStation",
+   Callback = function()
+      game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-209.8, -111.6, -118.7)
+   end
+})
+
+Tab:CreateButton({
+   Name = "Teleport to WareHouse",
+   Callback = function()
+      game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(316.0, -112.5, -257.3)
+   end
+})
+
+Tab:CreateButton({
+   Name = "Teleport to Ritual",
+   Callback = function()
+      game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-20.1, -108.6, -228.5)
+   end
+})
+
+Tab:CreateButton({
+   Name = "Teleport to LeaderBoard",
+   Callback = function()
+      game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(47.1, -97.0, 351.2)
+   end
+})
+
+Tab:CreateButton({
+   Name = "Teleport to Radio Tower",
+   Callback = function()
+      game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-403.7, -111.5, 45.6)
+   end
+})
+
+local Divider = Tab:CreateDivider()
+
+Tab:CreateButton({
+    Name = "Unlock DoubleBarrel",
+    Callback = function()
+        if bp and bp:GetAttribute("DoubleBarrel") ~= nil then
+            bp:SetAttribute("DoubleBarrel", true)
+            print("Unlocked: DoubleBarrel")
+        end
+    end
+})
+
+Tab:CreateButton({
+    Name = "Unlock M1911",
+    Callback = function()
+        if bp and bp:GetAttribute("M1911") ~= nil then
+            bp:SetAttribute("M1911", true)
+            print("Unlocked: M1911")
+        end
+    end
+})
+
+Tab:CreateButton({
+    Name = "Unlock Machete",
+    Callback = function()
+        if bp and bp:GetAttribute("Machete") ~= nil then
+            bp:SetAttribute("Machete", true)
+            print("Unlocked: Machete")
+        end
+    end
+})
+
+Tab:CreateButton({
+    Name = "Unlock SpellBook",
+    Callback = function()
+        if bp and bp:GetAttribute("SpellBook") ~= nil then
+            bp:SetAttribute("SpellBook", true)
+            print("Unlocked: SpellBook")
+        end
+    end
+})
+
+Tab:CreateButton({
+    Name = "Unlock CombatKnife",
+    Callback = function()
+        if bp and bp:GetAttribute("CombatKnife") ~= nil then
+            bp:SetAttribute("CombatKnife", true)
+            print("Unlocked: CombatKnife")
+        end
+    end
+})
+
+
+Tab:CreateButton({
+    Name = "Unlock all blueprints",
+    Callback = function()
+        for _, weapon in ipairs({ "CombatKnife","DoubleBarrel","M1911","Machete","SpellBook" }) do
+            if bp:GetAttribute(weapon) ~= nil then
+                bp:SetAttribute(weapon, true)
+                print("Unlocked: " .. weapon)
+            else
+                print("Attribute '" .. weapon .. "' not found.")
+            end
+        end
+    end
+})
+
+local Tab = Window:CreateTab("Render", "shield")
+
+Tab:CreateButton({
+   Name = "Scrap Esp - not mine",
+   Callback = function()
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/BongCloudMaster/CHAIN/main/scrap%20esp.lua"))()
+   end,
+})
+
+Tab:CreateButton({
+   Name = "Chain Esp - not mine",
+   Callback = function()
+		loadstring(game:HttpGet("https://pastebin.com/raw/hrWki5nR"))()
+   end,
+})
+
+-- Only 842 lines of code, wow

@@ -45,14 +45,6 @@ local function getAttr(model, attr)
     return ok and val or nil
 end
 
-local function triggerQ(id)
-    if not lastTriggered[id] then
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
-        lastTriggered[id] = true
-    end
-end
-
 local function NotifyAboutVirtual()
     if not VirtualInputManager then
         Rayfield:Notify({
@@ -455,39 +447,26 @@ local function getAttr(model, attr)
     return ok and val or nil
 end
 
+local RunService = game:GetService("RunService")
+
 Tab:CreateToggle({
     Name = "Auto Choke Dodge",
     CurrentValue = false,
     Flag = "AutoChokeQ",
     Callback = function(on)
-        if not VirtualInputManager then NotifyAboutVirtual() end
+        if not VirtualInputManager then 
+            NotifyAboutVirtual() 
+            return 
+        end
         Clear("ChokeQ")
         if not on then return end
 
+        local active = false
+        local lastPress = 0
+        local cooldown = 0.25
+
         local function attach()
             Clear("ChokeQ")
-
-            for _, chain in ipairs(AIFolder:GetChildren()) do
-                local chokeObj = getAttr(chain, "ChokeMeter")
-                if typeof(chokeObj) == "Instance" and chokeObj:IsA("NumberValue") then
-                    Connections[chokeObj] = chokeObj:GetPropertyChangedSignal("Value"):Connect(function()
-                        if not chokeObj or not chokeObj.Parent then return end
-
-                        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                        local chainHRP = chain:FindFirstChild("HumanoidRootPart") or chain
-                        if not hrp or not chainHRP then return end
-
-                        local id = chain:GetDebugId()
-
-                        if chokeObj.Value >= 97 and not lastTriggered[id] then
-                            lastTriggered[id] = true
-                            triggerQ(id)
-                        elseif chokeObj.Value < 97 then
-                            lastTriggered[id] = false
-                        end
-                    end)
-                end
-            end
 
             local soundFolder = game.ReplicatedStorage.GameStuff.Sounds.AISounds.CHAIN.Choke
             for _, sound in ipairs(soundFolder:GetChildren()) do
@@ -495,22 +474,25 @@ Tab:CreateToggle({
                     Connections[sound] = sound:GetPropertyChangedSignal("Playing"):Connect(function()
                         if not sound or not sound.Parent then return end
                         if sound.Playing then
-                            for _, chain in ipairs(AIFolder:GetChildren()) do
-                                local id = chain:GetDebugId()
-                                if not lastTriggered[id] then
-                                    lastTriggered[id] = true
-                                    triggerQ(id)
-                                end
-                            end
+                            active = true
                         else
-                            for _, chain in ipairs(AIFolder:GetChildren()) do
-                                lastTriggered[chain:GetDebugId()] = false
-                            end
+                            active = false
                         end
                     end)
                 end
             end
         end
+
+        Connections["ChokeQ_Render"] = RunService.RenderStepped:Connect(function()
+            if active then
+                local now = tick()
+                if now - lastPress >= cooldown then
+                    lastPress = now
+                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+                end
+            end
+        end)
 
         attach()
         player.CharacterAdded:Connect(attach)

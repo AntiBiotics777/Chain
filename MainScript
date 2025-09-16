@@ -450,6 +450,11 @@ Tab:CreateToggle({
     end
 })
 
+local function getAttr(model, attr)
+    local ok, val = pcall(model.GetAttribute, model, attr)
+    return ok and val or nil
+end
+
 Tab:CreateToggle({
     Name = "Auto Choke Dodge",
     CurrentValue = false,
@@ -467,10 +472,13 @@ Tab:CreateToggle({
                 if typeof(chokeObj) == "Instance" and chokeObj:IsA("NumberValue") then
                     Connections[chokeObj] = chokeObj:GetPropertyChangedSignal("Value"):Connect(function()
                         if not chokeObj or not chokeObj.Parent then return end
+
                         local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
                         local chainHRP = chain:FindFirstChild("HumanoidRootPart") or chain
                         if not hrp or not chainHRP then return end
+
                         local id = chain:GetDebugId()
+
                         if chokeObj.Value >= 97 and not lastTriggered[id] then
                             lastTriggered[id] = true
                             triggerQ(id)
@@ -495,6 +503,84 @@ Tab:CreateToggle({
                                 end
                             end
                         else
+                            for _, chain in ipairs(AIFolder:GetChildren()) do
+                                lastTriggered[chain:GetDebugId()] = false
+                            end
+                        end
+                    end)
+                end
+            end
+        end
+
+        attach()
+        player.CharacterAdded:Connect(attach)
+    end
+})
+
+local function getAttr(model, attr)
+    local ok, val = pcall(model.GetAttribute, model, attr)
+    return ok and val or nil
+end
+
+Tab:CreateToggle({
+    Name = "Auto Choke Dodge With Debug",
+    CurrentValue = false,
+    Flag = "AutoChokeQ",
+    Callback = function(on)
+        if not VirtualInputManager then NotifyAboutVirtual() end
+        Clear("ChokeQ")
+        if not on then return end
+
+        local function attach()
+            Clear("ChokeQ")
+
+            for _, chain in ipairs(AIFolder:GetChildren()) do
+                local chokeObj = getAttr(chain, "ChokeMeter")
+                if typeof(chokeObj) == "Instance" and chokeObj:IsA("NumberValue") then
+                    print("[DEBUG] Connected ChokeMeter for chain:", chain.Name)
+                    Connections[chokeObj] = chokeObj:GetPropertyChangedSignal("Value"):Connect(function()
+                        if not chokeObj or not chokeObj.Parent then return end
+
+                        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                        local chainHRP = chain:FindFirstChild("HumanoidRootPart") or chain
+                        if not hrp or not chainHRP then return end
+
+                        local id = chain:GetDebugId()
+
+                        if chokeObj.Value >= 97 and not lastTriggered[id] then
+                            lastTriggered[id] = true
+                            print("[DEBUG] Trigger Q on chain:", chain.Name, "Value:", chokeObj.Value)
+                            triggerQ(id)
+                        elseif chokeObj.Value < 97 then
+                            if lastTriggered[id] then
+                                print("[DEBUG] Reset trigger for chain:", chain.Name, "Value dropped to:", chokeObj.Value)
+                            end
+                            lastTriggered[id] = false
+                        end
+                    end)
+                else
+                    print("[DEBUG] No valid ChokeMeter found for chain:", chain.Name)
+                end
+            end
+
+            local soundFolder = game.ReplicatedStorage.GameStuff.Sounds.AISounds.CHAIN.Choke
+            for _, sound in ipairs(soundFolder:GetChildren()) do
+                if typeof(sound) == "Instance" and sound:IsA("Sound") and sound.Name ~= "ChokeLose" and sound.Name ~= "ChokeWin" then
+                    print("[DEBUG] Connected Sound:", sound.Name)
+                    Connections[sound] = sound:GetPropertyChangedSignal("Playing"):Connect(function()
+                        if not sound or not sound.Parent then return end
+                        if sound.Playing then
+                            print("[DEBUG] Sound started:", sound.Name)
+                            for _, chain in ipairs(AIFolder:GetChildren()) do
+                                local id = chain:GetDebugId()
+                                if not lastTriggered[id] then
+                                    lastTriggered[id] = true
+                                    print("[DEBUG] Trigger Q by sound on chain:", chain.Name)
+                                    triggerQ(id)
+                                end
+                            end
+                        else
+                            print("[DEBUG] Sound stopped:", sound.Name, "Resetting triggers")
                             for _, chain in ipairs(AIFolder:GetChildren()) do
                                 lastTriggered[chain:GetDebugId()] = false
                             end

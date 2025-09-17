@@ -68,7 +68,7 @@ task.spawn(function()
 end)
 
 local Window = Rayfield:CreateWindow({
-   Name = "Chain 1.2.5 alpha ver",
+   Name = "Chain 1.2.5",
    Icon = 0,
    LoadingTitle = "Injecting...",
    LoadingSubtitle = "by unknown?",
@@ -934,8 +934,8 @@ Tab:CreateButton({
 Tab:CreateButton({
    Name = "Chain Esp - not mine",
    Callback = function()
-		loadstring(game:HttpGet("https://pastebin.com/raw/hrWki5nR"))()
+		loadstring(game:HttpGet("https://github.com/AntiBiotics777/Chain/blob/main/Esp"))()
    end,
 })
 
--- Only 842 lines of code, wow
+-- Only 941 lines of code, wow

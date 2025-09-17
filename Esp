@@ -1,0 +1,153 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local Bin = {}
+do
+    Bin.__index = Bin
+    Bin.__tostring = function() return "Bin" end
+
+    function Bin.new()
+        local self = setmetatable({}, Bin)
+        self.head = nil
+        self.tail = nil
+        return self
+    end
+
+    function Bin:add(item)
+        local node = { item = item }
+        if not self.head then self.head = node end
+        if self.tail then self.tail.next = node end
+        self.tail = node
+        return self
+    end
+
+    function Bin:destroy()
+        local node = self.head
+        while node do
+            local item = node.item
+            if type(item) == "function" then pcall(item)
+            elseif typeof(item) == "RBXScriptConnection" then pcall(item.Disconnect, item)
+            elseif type(item) == "thread" then task.cancel(item)
+            elseif item.Destroy then pcall(item.Destroy, item)
+            elseif item.destroy then pcall(item.destroy, item)
+            end
+            node = node.next
+            self.head = node
+        end
+    end
+
+    function Bin:isEmpty()
+        return self.head == nil
+    end
+end
+
+local function createScreenGui(name)
+    local gui = Instance.new("ScreenGui")
+    gui.Name = name or "ESP_GUI"
+    gui.DisplayOrder = 10
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+    return gui
+end
+
+local ESP = {}
+do
+    ESP.__index = ESP
+    ESP.__tostring = function() return "ESP" end
+    ESP.instances = {}
+    ESP.connections = Bin.new()
+
+    function ESP.new(entity)
+        local self = setmetatable({}, ESP)
+        self.entity = entity
+        self.bin = Bin.new()
+        self.labels = {}
+        self:createLabels()
+        ESP.instances[entity] = self
+        local conn = entity.AncestryChanged:Connect(function(_, parent)
+            if not parent then self:destroy() end
+        end)
+        self.bin:add(conn)
+        return self
+    end
+
+    function ESP:createLabels()
+        local gui = createScreenGui("ESP_GUI")
+        local container = Instance.new("Frame")
+        container.BackgroundTransparency = 1
+        container.AnchorPoint = Vector2.new(0.5, 0)
+        container.Visible = false
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Font = Enum.Font.Nunito
+        nameLabel.Size = UDim2.new(1, 0, 0, 14)
+        nameLabel.TextSize = 14
+        nameLabel.TextStrokeTransparency = 0.5
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+        nameLabel.Text = self.entity.Name
+        nameLabel.Parent = container
+        local dataLabel = Instance.new("TextLabel")
+        dataLabel.Font = Enum.Font.Nunito
+        dataLabel.Size = UDim2.new(1, 0, 0, 14)
+        dataLabel.TextSize = 12
+        dataLabel.TextStrokeTransparency = 0.5
+        dataLabel.BackgroundTransparency = 1
+        dataLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        dataLabel.Text = "[0] [Anger : 0%]"
+        dataLabel.Parent = container
+        local layout = Instance.new("UIListLayout")
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+        layout.Padding = UDim.new(0, -4)
+        layout.Parent = container
+        container.Parent = gui
+        self.labels.container = container
+        self.labels.name = nameLabel
+        self.labels.data = dataLabel
+        self.labels.layout = layout
+        self.bin:add(container)
+    end
+
+    function ESP:render()
+        if not self.entity or not self.entity:FindFirstChild("HumanoidRootPart") then
+            self.labels.container.Visible = false
+            return
+        end
+        local cam = Workspace.CurrentCamera
+        local pos, onScreen = cam:WorldToViewportPoint(self.entity.HumanoidRootPart.Position)
+        local container = self.labels.container
+        local nameLabel = self.labels.name
+        local dataLabel = self.labels.data
+        if onScreen then
+            container.Visible = true
+            local dist = (Players.LocalPlayer.Character.HumanoidRootPart.Position - self.entity.HumanoidRootPart.Position).Magnitude
+            dataLabel.Text = string.format("[%0.1f] [Anger: %0.1f]", dist, self.entity:GetAttribute("Anger") or 0)
+            container.Position = UDim2.new(0, pos.X, 0, pos.Y)
+        else
+            container.Visible = false
+        end
+    end
+
+    function ESP:destroy()
+        ESP.instances[self.entity] = nil
+        self.bin:destroy()
+    end
+end
+
+local AIFolder = Workspace:WaitForChild("Misc"):WaitForChild("AI")
+ESP.connections:add(AIFolder.ChildAdded:Connect(function(instance)
+    task.spawn(function()
+        repeat task.wait() until instance:FindFirstChild("HumanoidRootPart")
+        if instance:IsA("Model") then ESP.new(instance) end
+    end)
+end))
+
+ESP.connections:add(RunService.RenderStepped:Connect(function()
+    for _, esp in pairs(ESP.instances) do esp:render() end
+end))
+
+for _, model in pairs(AIFolder:GetChildren()) do
+    if model:FindFirstChild("Humanoid") then pcall(ESP.new, model) end
+end

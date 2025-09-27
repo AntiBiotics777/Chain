@@ -1,4 +1,5 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
 local Players = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -28,6 +29,8 @@ local CharAddedConn = nil
 local VirtualInputManager = nil
 local Connections = {}
 local lastTriggered = {}
+local cooldown = 0.2
+local lastPress = 0
 
 local AdonisPressed = false
 local InfStaminaEnabled = false
@@ -310,13 +313,6 @@ local Tab = Window:CreateTab("experimental", "flask-conical")
 
 local Label = Tab:CreateLabel("Use it at your own risk it may get detected by server script, Make sure that u removed adonis anticheat, half of these is not working lol", "circle-alert")
 
-Rayfield:Notify({
-   Title = "Warning",
-   Content = "Please use these only with a small number of players, as anyone could report you for using them.",
-   Duration = 15,
-   Image = 7488932274
-})
-
 Tab:CreateToggle({
     Name = "Anti Longer Dodge CoolDown",
     CurrentValue = false,
@@ -488,58 +484,39 @@ Tab:CreateToggle({
     end
 })
 
-local function getAttr(model, attr)
-    local ok, val = pcall(model.GetAttribute, model, attr)
-    return ok and val or nil
-end
-
 local RunService = game:GetService("RunService")
 
 Tab:CreateToggle({
-    Name = "Auto Choke Dodge",
+    Name = "Auto Choke Dodge - recommended to have ping under 200, not accurate",
     CurrentValue = false,
-    Flag = "AutoChokeQ",
+    Flag = "AutoChokeQToggle",
     Callback = function(on)
+        Clear("AutoChokeQ")
         if not VirtualInputManager then 
-            NotifyAboutVirtual() 
-            return 
+            NotifyAboutVirtual()
+            return
         end
-        Clear("ChokeQ")
-        if not on then return end
-
-        local active = false
-        local lastPress = 0
-        local cooldown = 0.25
-
-        local function attach()
-            Clear("ChokeQ")
-
-            local soundFolder = game.ReplicatedStorage.GameStuff.Sounds.AISounds.CHAIN.Choke
-            for _, sound in ipairs(soundFolder:GetChildren()) do
-                if typeof(sound) == "Instance" and sound:IsA("Sound") and sound.Name ~= "ChokeLose" and sound.Name ~= "ChokeWin" then
-                    Connections[sound] = sound:GetPropertyChangedSignal("Playing"):Connect(function()
-                        if not sound or not sound.Parent then return end
-                        if sound.Playing then
-                            active = true
-                        else
-                            active = false
+        local AIFolder = Workspace:WaitForChild("Misc"):WaitForChild("AI")
+        local cooldown, lastPress = 0.2, 0
+        local function attach(char)
+            Clear("AutoChokeQPerChar")
+            local conn = RunService.RenderStepped:Connect(function()
+                for _, ai in pairs(AIFolder:GetChildren()) do
+                    if ai:IsA("Model") then
+                        local choke = ai:GetAttribute("ChokeMeter")
+                        if choke == 95 or choke == 100 then
+                            local now = tick()
+                            if now - lastPress >= cooldown then
+                                lastPress = now
+                                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+                                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+                            end
                         end
-                    end)
+                    end
                 end
-            end
+            end)
+            Connections["AutoChokeQPerChar"] = { Render = conn }
         end
-
-        Connections["ChokeQ_Render"] = RunService.RenderStepped:Connect(function()
-            if active then
-                local now = tick()
-                if now - lastPress >= cooldown then
-                    lastPress = now
-                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
-                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
-                end
-            end
-        end)
-
         attach()
         player.CharacterAdded:Connect(attach)
     end
@@ -689,51 +666,57 @@ Tab:CreateToggle({
     CurrentValue = false,
     Flag = "Toggle1",
     Callback = function(state)
-        local aiming = false
-        local target = nil
-
-        UIS.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton2 then
-                aiming = true
-                target = nil
+        if Connections["Aimbot"] then
+            for _, conn in ipairs(Connections["Aimbot"]) do
+                conn:Disconnect()
             end
-        end)
+            Connections["Aimbot"] = nil
+        end
 
-        UIS.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton2 then
-                aiming = false
-            end
-        end)
+        if state then
+            local aiming = false
+            local target = nil
 
-        RunService.Heartbeat:Connect(function()
-            if not target or not target.Parent or math.random() < 0.01 then
-                local closestDist = math.huge
-                local closestTarget = nil
+            local function attach()
+                local inputBegan = UIS.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+                        aiming = true
+                        target = nil
+                    end
+                end)
 
-                for _, npc in ipairs(AIFolder:GetChildren()) do
-                    local root = npc:FindFirstChild("HumanoidRootPart")
-                    if root then
-                        local dist = (Cam.CFrame.Position - root.Position).Magnitude
-                        if dist < closestDist then
-                            closestDist = dist
-                            closestTarget = npc
+                local inputEnded = UIS.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+                        aiming = false
+                    end
+                end)
+
+                local heartbeat = RunService.Heartbeat:Connect(function()
+                    if aiming then
+                        local closestDist = math.huge
+                        for _, npc in ipairs(AIFolder:GetChildren()) do
+                            local root = npc:FindFirstChild("HumanoidRootPart")
+                            if root then
+                                local dist = (Cam.CFrame.Position - root.Position).Magnitude
+                                if dist < closestDist then
+                                    closestDist = dist
+                                    target = root
+                                end
+                            end
+                        end
+
+                        if target and target.Parent then
+                            Cam.CFrame = CFrame.new(Cam.CFrame.Position, target.Position)
                         end
                     end
-                end
+                end)
 
-                target = closestTarget
+                Connections["Aimbot"] = {inputBegan, inputEnded, heartbeat}
             end
 
-            if state and aiming and target then
-                local offset = Vector3.new(
-                    (math.random() - 0.5) * 0.4,
-                    (math.random() - 0.5) * 0.4,
-                    (math.random() - 0.5) * 0.4
-                )
-                local desired = CFrame.new(Cam.CFrame.Position, target:GetPivot().Position + offset)
-                Cam.CFrame = Cam.CFrame:Lerp(desired, 0.1 + math.random() * 0.15)
-            end
-        end)
+            attach()
+            player.CharacterAdded:Connect(attach)
+        end
     end
 })
 
@@ -1078,4 +1061,4 @@ Tab:CreateButton({
    end,
 })
 
--- Only 1182 lines of code, wow
+local NewFunction = loadstring(game:HttpGet('https://raw.githubusercontent.com/AntiBiotics777/Chain/refs/heads/main/Scrapped'))() -- Why obfuscated? Scrapped. Originally meant to handle connections and was supposed to be added ages ago, but it doesn't work.

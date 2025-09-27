@@ -25,12 +25,10 @@ local Cam = Workspace.CurrentCamera
 local AIFolder = Workspace:WaitForChild("Misc"):WaitForChild("AI")
 
 local StaminaConn, CombatConn, ClashConn = nil, nil, nil
+local cooldown, lastPress, prevValues = 0.2, 0, {}
 local CharAddedConn = nil
 local VirtualInputManager = nil
 local Connections = {}
-local lastTriggered = {}
-local cooldown = 0.2
-local lastPress = 0
 
 local AdonisPressed = false
 local InfStaminaEnabled = false
@@ -497,26 +495,37 @@ Tab:CreateToggle({
             return
         end
         local AIFolder = Workspace:WaitForChild("Misc"):WaitForChild("AI")
-        local cooldown, lastPress = 0.2, 0
+
+        local function pressQ()
+            local now = tick()
+            if now - lastPress >= cooldown then
+                lastPress = now
+                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+            end
+        end
+
         local function attach(char)
             Clear("AutoChokeQPerChar")
-            local conn = RunService.RenderStepped:Connect(function()
-                for _, ai in pairs(AIFolder:GetChildren()) do
-                    if ai:IsA("Model") then
-                        local choke = ai:GetAttribute("ChokeMeter")
-                        if choke == 95 or choke == 100 then
-                            local now = tick()
-                            if now - lastPress >= cooldown then
-                                lastPress = now
-                                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
-                                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+            Connections["AutoChokeQPerChar"] = {
+                Render = RunService.RenderStepped:Connect(function()
+                    for _, ai in pairs(AIFolder:GetChildren()) do
+                        if ai:IsA("Model") then
+                            local choke, prev = ai:GetAttribute("ChokeMeter"), prevValues[ai]
+                            if choke then
+                                if choke == 95 or choke == 100 then
+                                    pressQ()
+                                elseif prev and prev > 75 and choke == 0 and prev ~= 95 and prev ~= 100 then
+                                    pressQ()
+                                end
+                                prevValues[ai] = choke
                             end
                         end
                     end
-                end
-            end)
-            Connections["AutoChokeQPerChar"] = { Render = conn }
+                end)
+            }
         end
+
         attach()
         player.CharacterAdded:Connect(attach)
     end

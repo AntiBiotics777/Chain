@@ -1,5 +1,4 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-local NewFunction = loadstring(game:HttpGet("https://raw.githubusercontent.com/AntiBiotics777/Chain/refs/heads/main/Scrapped"))() -- scrapped function,why obfuscated? because chain mods could possibly patch,doesnt work.
 local Players = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")

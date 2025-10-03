@@ -488,7 +488,6 @@ Tab:CreateToggle({
     Flag = "AutoChokeQToggle",
     Callback = function(on)
         Clear("AutoChokeQ")
-        Clear("AutoChokeQPerChar")
 
         if not on then return end
         if not VirtualInputManager then 
@@ -505,33 +504,40 @@ Tab:CreateToggle({
             end
         end
 
-        local function attach()
-            Clear("AutoChokeQPerChar")
+        Connections["AutoChokeQ"] = RunService.RenderStepped:Connect(function()
+            for _, ai in pairs(AIFolder:GetChildren()) do
+                if ai:IsA("Model") then
+                    local choke, prev = ai:GetAttribute("ChokeMeter"), prevValues[ai]
+                    if choke then
+                        if choke == 95 or choke == 100 then
+                            pressQ()
+                        elseif prev and prev > 75 and choke == 0 and prev ~= 95 and prev ~= 100 then
+                            pressQ()
+                        end
+                        prevValues[ai] = choke
+                    end
+                end
+            end
+        end)
 
-            Connections["AutoChokeQPerChar"] = {
-                Render = RunService.RenderStepped:Connect(function()
-                    for _, ai in pairs(AIFolder:GetChildren()) do
-                        if ai:IsA("Model") then
-                            local choke, prev = ai:GetAttribute("ChokeMeter"), prevValues[ai]
-                            if choke then
-                                if choke == 95 or choke == 100 then
-                                    pressQ()
-                                elseif prev and prev > 75 and choke == 0 and prev ~= 95 and prev ~= 100 then
-                                    pressQ()
-                                end
-                                prevValues[ai] = choke
+        player.CharacterAdded:Connect(function()
+            Clear("AutoChokeQ")
+            Connections["AutoChokeQ"] = RunService.RenderStepped:Connect(function()
+                for _, ai in pairs(AIFolder:GetChildren()) do
+                    if ai:IsA("Model") then
+                        local choke, prev = ai:GetAttribute("ChokeMeter"), prevValues[ai]
+                        if choke then
+                            if choke == 95 or choke == 100 then
+                                pressQ()
+                            elseif prev and prev > 75 and choke == 0 and prev ~= 95 and prev ~= 100 then
+                                pressQ()
                             end
+                            prevValues[ai] = choke
                         end
                     end
-                end),
-
-                CharConn = player.CharacterAdded:Connect(function()
-                    attach()
-                end)
-            }
-        end
-
-        attach()
+                end
+            end)
+        end)
     end
 })
 

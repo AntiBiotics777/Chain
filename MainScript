@@ -482,19 +482,19 @@ Tab:CreateToggle({
     end
 })
 
-local RunService = game:GetService("RunService")
-
 Tab:CreateToggle({
     Name = "Auto Choke Dodge - recommended to have ping under 200, not accurate",
     CurrentValue = false,
     Flag = "AutoChokeQToggle",
     Callback = function(on)
         Clear("AutoChokeQ")
+        Clear("AutoChokeQPerChar")
+
+        if not on then return end
         if not VirtualInputManager then 
             NotifyAboutVirtual()
             return
         end
-        local AIFolder = Workspace:WaitForChild("Misc"):WaitForChild("AI")
 
         local function pressQ()
             local now = tick()
@@ -505,8 +505,9 @@ Tab:CreateToggle({
             end
         end
 
-        local function attach(char)
+        local function attach()
             Clear("AutoChokeQPerChar")
+
             Connections["AutoChokeQPerChar"] = {
                 Render = RunService.RenderStepped:Connect(function()
                     for _, ai in pairs(AIFolder:GetChildren()) do
@@ -522,12 +523,15 @@ Tab:CreateToggle({
                             end
                         end
                     end
+                end),
+
+                CharConn = player.CharacterAdded:Connect(function()
+                    attach()
                 end)
             }
         end
 
         attach()
-        player.CharacterAdded:Connect(attach)
     end
 })
 

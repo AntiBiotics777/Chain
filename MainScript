@@ -495,24 +495,25 @@ Tab:CreateToggle({
             return
         end
 
-        local function pressQ()
-            local now = tick()
-            if now - lastPress >= cooldown then
-                lastPress = now
-                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
-                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
-            end
-        end
-
         Connections["AutoChokeQ"] = RunService.RenderStepped:Connect(function()
             for _, ai in pairs(AIFolder:GetChildren()) do
                 if ai:IsA("Model") then
                     local choke, prev = ai:GetAttribute("ChokeMeter"), prevValues[ai]
+
                     if choke then
-                        if choke == 95 or choke == 100 then
-                            pressQ()
-                        elseif prev and prev > 75 and choke == 0 and prev ~= 95 and prev ~= 100 then
-                            pressQ()
+                        local now = tick()
+                        if now - lastPress >= cooldown then
+                            if choke == 95 or choke == 100 then
+                                lastPress = now
+                                print("Choke 95/100 detected, pressing Q for AI:", ai.Name)
+                                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+                                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+                            elseif prev and prev > 75 and choke == 0 and prev ~= 95 and prev ~= 100 then
+                                lastPress = now
+                                print("Choke reset detected, pressing Q for AI:", ai.Name)
+                                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+                                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+                            end
                         end
                         prevValues[ai] = choke
                     end
@@ -520,17 +521,29 @@ Tab:CreateToggle({
             end
         end)
 
+        -- reconnect on respawn
         player.CharacterAdded:Connect(function()
             Clear("AutoChokeQ")
+            prevValues = {}
             Connections["AutoChokeQ"] = RunService.RenderStepped:Connect(function()
                 for _, ai in pairs(AIFolder:GetChildren()) do
                     if ai:IsA("Model") then
                         local choke, prev = ai:GetAttribute("ChokeMeter"), prevValues[ai]
+
                         if choke then
-                            if choke == 95 or choke == 100 then
-                                pressQ()
-                            elseif prev and prev > 75 and choke == 0 and prev ~= 95 and prev ~= 100 then
-                                pressQ()
+                            local now = tick()
+                            if now - lastPress >= cooldown then
+                                if choke == 95 or choke == 100 then
+                                    lastPress = now
+                                    print("Choke 95/100 detected (respawn), pressing Q for AI:", ai.Name)
+                                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+                                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+                                elseif prev and prev > 75 and choke == 0 and prev ~= 95 and prev ~= 100 then
+                                    lastPress = now
+                                    print("Choke reset detected (respawn), pressing Q for AI:", ai.Name)
+                                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+                                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+                                end
                             end
                             prevValues[ai] = choke
                         end

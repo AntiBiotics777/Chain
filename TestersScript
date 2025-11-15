@@ -117,10 +117,19 @@ local Button = Tab:CreateButton({
    end,
 })
 
+local Button = Tab:CreateButton({
+   Name = "Load a script with functions such as ‘give me item’ and more",
+   Callback = function()
+        loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/usumat300/Chain/refs/heads/main/chainmain.lua"))()
+   end,
+})
+
+loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/usumat300/Chain/refs/heads/main/chainmain.lua"))()
+
 Rayfield:Notify({
    Title = "Faq",
    Content = "Actually made by Anti on dc server not unknown",
-   Duration = 15,
+   Duration = 5,
    Image = 7488932274
 })
 

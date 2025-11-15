@@ -454,6 +454,47 @@ Tab:CreateToggle({
 })
 
 Tab:CreateToggle({
+    Name = "Auto Choke Dodge - recommended to have ping under 200, not accurate",
+    CurrentValue = false,
+    Flag = "AutoChokeQToggle",
+    Callback = function(on)
+        Clear("AutoChokeQ")
+        if not on then return end
+        if not VirtualInputManager then
+            NotifyAboutVirtual()
+            return
+        end
+		local function startAutoChoke()
+		    Clear("AutoChokeQ")
+		    Connections["AutoChokeQ"] = RunService.RenderStepped:Connect(function()
+		        for _, ai in pairs(AIFolder:GetChildren()) do
+		            if ai:IsA("Model") then
+		                local choke, prev = ai:GetAttribute("ChokeMeter"), prevValues[ai]
+		                if choke then
+		                    local now = tick()
+		                    if now - lastPress >= cooldown then
+		                        if prev and prev > 70 and choke == 0 then
+		                            lastPress = now
+									task.wait(0.1)
+		                            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+		                            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+		                        end
+		                    end
+		                    prevValues[ai] = choke
+		                end
+		            end
+		        end
+		    end)
+		end
+        startAutoChoke()
+        if CharAddedConn then CharAddedConn:Disconnect() end
+        CharAddedConn = player.CharacterAdded:Connect(function()
+            startAutoChoke()
+        end)
+    end
+})
+
+Tab:CreateToggle({
     Name = "Clash CoolDown Bypass",
     CurrentValue = false,
     Flag = "ClashCD",
@@ -535,42 +576,6 @@ Tab:CreateToggle({
                                 if #overlap > 0 then return end
 
                                 root.CFrame = CFrame.new(target)
-                            end
-                        end
-                    end
-                end)
-            end
-            attach()
-            player.CharacterAdded:Connect(attach)
-        end
-    end
-})
-
-Tab:CreateToggle({
-    Name = "Auto Avoid Chain GroundSlam",
-    CurrentValue = false,
-    Flag = "AutoSlam",
-    Callback = function(on)
-        Clear("SlamEvade")
-        if on then
-            local function attach()
-                Clear("SlamEvade")
-                Connections["SlamEvade"] = RunService.Heartbeat:Connect(function()
-                    local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                    if not myRoot then return end
-                    for _, chain in ipairs(AIFolder:GetChildren()) do
-                        local burst = getAttr(chain, "Burst")
-                        local root = chain:FindFirstChild("HumanoidRootPart")
-                        if burst and type(burst) == "number" and burst >= 100 and root then
-                            local distance = (myRoot.Position - root.Position).Magnitude
-                            if distance < 40 then
-                                local offset = (myRoot.Position - root.Position).Unit
-                                local angle = math.rad(math.random(-120, 120))
-                                local rx = offset.X * math.cos(angle) - offset.Z * math.sin(angle)
-                                local rz = offset.X * math.sin(angle) + offset.Z * math.cos(angle)
-                                local dir = Vector3.new(rx, 0, rz).Unit
-                                local pos = myRoot.Position + dir * 50 + Vector3.new(0, math.random(3, 6), 0)
-                                myRoot.CFrame = CFrame.new(pos)
                             end
                         end
                     end

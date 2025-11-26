@@ -535,12 +535,10 @@ Tab:CreateToggle({
                             if now - lastPress >= cooldown then
                                 if choke == 95 or choke == 100 then
                                     lastPress = now
-                                    print("Choke 95/100 detected (respawn), pressing Q for AI:", ai.Name)
                                     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
                                     VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
                                 elseif prev and prev > 75 and choke == 0 and prev ~= 95 and prev ~= 100 then
                                     lastPress = now
-                                    print("Choke reset detected (respawn), pressing Q for AI:", ai.Name)
                                     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
                                     VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
                                 end
